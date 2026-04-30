@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель администратора - Корочки.есть</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+  <div class="page-container">
+    <h1>Панель администратора</h1>
+
+    <div class="nav">
+      <span>Администратор системы</span>
+      <a href="{{ url_for('logout') }}">Выйти</a>
+    </div>
+
+    {% if apps %}
+    {% for app in apps %}
+    <div class="app-card">
+      <p><b>Пользователь:</b> {{ app.full_name }}</p>
+      <p><b>Email:</b> {{ app.email }} | <b>Телефон:</b> {{ app.phone }}</p>
+      <hr>
+      <p><b>Курс:</b> {{ app.course_name }}</p>
+      <p><b>Дата начала:</b> {{ app.start_date }}</p>
+      <p><b>Оплата:</b> {{ app.payment_method }}</p>
+      <p><b>Текущий статус:</b>
+        <span style="background: #f5efe6; padding: 4px 10px; border-radius: 8px; font-weight: bold; color: #6b4c30;">
+          {{ app.status }}
+        </span>
+      </p>
+
+      {% if app.feedback %}
+      <p><b>Отзыв:</b> {{ app.feedback }}</p>
+      {% endif %}
+
+      <form class="status-form" method="post">
+        <input type="hidden" name="app_id" value="{{ app.id }}">
+        <select name="status">
+          <option value="Новая" {% if app.status=='Новая' %}selected{% endif %}>Новая</option>
+          <option value="Идет обучение" {% if app.status=='Идет обучение' %}selected{% endif %}>Идет обучение </option>
+          <option value="Обучение завершено" {% if app.status=='Обучение завершено' %}selected{% endif %}>Обучение
+            завершено</option>
+        </select>
+        <button type="submit">Сменить статус</button>
+      </form>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="app-card">
+      <p style="text-align: center; color: #8b6b4a;">Заявок пока нет.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
