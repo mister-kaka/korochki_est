@@ -26,10 +26,9 @@
       <p><b>Курс:</b> {{ app.course_name }}</p>
       <p><b>Дата начала:</b> {{ app.start_date }}</p>
       <p><b>Оплата:</b> {{ app.payment_method }}</p>
-      <p><b>Текущий статус:</b>
-        <span style="background: #f5efe6; padding: 4px 10px; border-radius: 8px; font-weight: bold; color: #6b4c30;">
-          {{ app.status }}
-        </span>
+      <p>
+        <b>Текущий статус:</b>
+        <span class="status-badge">{{ app.status }}</span>
       </p>
 
       {% if app.feedback %}
@@ -40,7 +39,7 @@
         <input type="hidden" name="app_id" value="{{ app.id }}">
         <select name="status">
           <option value="Новая" {% if app.status=='Новая' %}selected{% endif %}>Новая</option>
-          <option value="Идет обучение" {% if app.status=='Идет обучение' %}selected{% endif %}>Идет обучение </option>
+          <option value="Идет обучение" {% if app.status=='Идет обучение' %}selected{% endif %}>Идет обучение</option>
           <option value="Обучение завершено" {% if app.status=='Обучение завершено' %}selected{% endif %}>Обучение
             завершено</option>
         </select>
@@ -50,7 +49,7 @@
     {% endfor %}
     {% else %}
     <div class="app-card">
-      <p style="text-align: center; color: #8b6b4a;">Заявок пока нет.</p>
+      <p class="empty-message">Заявок пока нет.</p>
     </div>
     {% endif %}
   </div>

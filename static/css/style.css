@@ -201,3 +201,30 @@ hr {
 	border-top: 1px solid #e0cfb8;
 	margin: 10px 0;
 }
+
+.status-badge {
+	background: #f5efe6;
+	padding: 4px 10px;
+	border-radius: 8px;
+	font-weight: bold;
+	color: #6b4c30;
+}
+
+.empty-message {
+	text-align: center;
+	color: #8b6b4a;
+}
+
+.feedback-form {
+	margin-top: 10px;
+}
+
+.feedback-form textarea {
+	height: 70px;
+	resize: vertical;
+}
+
+.feedback-text {
+	margin-top: 10px;
+	font-style: italic;
+}

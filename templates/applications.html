@@ -13,7 +13,7 @@
     <h1>Мои заявки</h1>
 
     <div class="nav">
-      <span> <strong>{{ session.login }}</strong></span>
+      <span><strong>{{ session.login }}</strong></span>
       <div>
         <a href="{{ url_for('create_application') }}">+ Новая заявка</a>
         <a href="{{ url_for('logout') }}">Выйти</a>
@@ -29,23 +29,21 @@
       <p><b>Статус:</b> {{ app.status }}</p>
 
       {% if app.status == 'Обучение завершено' %}
-      <div class="feedback-section">
-        <form method="post">
-          <input type="hidden" name="app_id" value="{{ app.id }}">
-          <textarea name="feedback" placeholder="Оставьте отзыв о качестве обучения">{{ app.feedback or '' }}</textarea>
-          <button type="submit"> Сохранить отзыв</button>
-        </form>
-      </div>
+      <form class="feedback-form" method="post">
+        <input type="hidden" name="app_id" value="{{ app.id }}">
+        <textarea name="feedback" placeholder="Оставьте отзыв о качестве обучения">{{ app.feedback or '' }}</textarea>
+        <button type="submit">Сохранить отзыв</button>
+      </form>
       {% endif %}
 
       {% if app.feedback %}
-      <p style="margin-top: 10px; font-style: italic;"> {{ app.feedback }}</p>
+      <p class="feedback-text">{{ app.feedback }}</p>
       {% endif %}
     </div>
     {% endfor %}
     {% else %}
     <div class="app-card">
-      <p style="text-align: center; color: #8b6b4a;">У вас пока нет заявок.</p>
+      <p class="empty-message">У вас пока нет заявок.</p>
     </div>
     {% endif %}
   </div>
