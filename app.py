@@ -5,63 +5,50 @@ import re
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'
 
-def get_db():
+# ---- База данных ----
+
+def query(sql, params=(), fetchall=False, fetchone=False, commit=False):
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
-    return conn
+    cur = conn.execute(sql, params)
+    if commit:
+        conn.commit()
+    result = cur.fetchall() if fetchall else cur.fetchone() if fetchone else None
+    conn.close()
+    return result
 
-def validate_login(login):
-    return bool(re.match(r'^[a-zA-Z0-9]{6,}$', login))
+# ---- Валидация ----
 
-def validate_password(password):
-    return len(password) >= 8
+def validate(data):
+    errors = []
+    if not re.match(r'^[a-zA-Z0-9]{6,}$', data.get('login', '')):
+        errors.append('Логин: только латиница и цифры, минимум 6 символов')
+    if len(data.get('password', '')) < 8:
+        errors.append('Пароль: минимум 8 символов')
+    if not re.match(r'^[а-яА-ЯёЁ\s]+$', data.get('full_name', '')):
+        errors.append('ФИО: только кириллица и пробелы')
+    if not re.match(r'^8\(\d{3}\)\d{3}-\d{2}-\d{2}$', data.get('phone', '')):
+        errors.append('Телефон: формат 8(XXX)XXX-XX-XX')
+    if not re.match(r'^[^@]+@[^@]+\.[^@]+$', data.get('email', '')):
+        errors.append('Email: неверный формат')
+    return errors[0] if errors else None
 
-def validate_full_name(name):
-    return bool(re.match(r'^[а-яА-ЯёЁ\s]+$', name))
-
-def validate_phone(phone):
-    return bool(re.match(r'^8\(\d{3}\)\d{3}-\d{2}-\d{2}$', phone))
-
-def validate_email(email):
-    return bool(re.match(r'^[^@]+@[^@]+\.[^@]+$', email))
-
-# ---- Маршруты (страницы) ----
+# ---- Маршруты ----
 
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        return redirect(url_for('applications'))
-    return redirect(url_for('login'))
+    return redirect(url_for('applications') if 'user_id' in session else url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
     if request.method == 'POST':
-        login = request.form['login']
-        password = request.form['password']
-        full_name = request.form['full_name']
-        phone = request.form['phone']
-        email = request.form['email']
-
-        if not validate_login(login):
-            error = 'Логин: только латиница и цифры, минимум 6 символов'
-        elif not validate_password(password):
-            error = 'Пароль: минимум 8 символов'
-        elif not validate_full_name(full_name):
-            error = 'ФИО: только кириллица и пробелы'
-        elif not validate_phone(phone):
-            error = 'Телефон: формат 8(XXX)XXX-XX-XX'
-        elif not validate_email(email):
-            error = 'Email: неверный формат'
-        else:
+        error = validate(request.form)
+        if not error:
             try:
-                db = get_db()
-                db.execute(
-                    'INSERT INTO users (login, password, full_name, phone, email) VALUES (?, ?, ?, ?, ?)',
-                    (login, password, full_name, phone, email)
-                )
-                db.commit()
-                db.close()
+                query('INSERT INTO users (login, password, full_name, phone, email) VALUES (?, ?, ?, ?, ?)',
+                      (request.form['login'], request.form['password'], request.form['full_name'],
+                       request.form['phone'], request.form['email']), commit=True)
                 return redirect(url_for('login'))
             except sqlite3.IntegrityError:
                 error = 'Пользователь с таким логином уже существует'
@@ -71,25 +58,12 @@ def register():
 def login():
     error = None
     if request.method == 'POST':
-        login = request.form['login']
-        password = request.form['password']
-
-        db = get_db()
-        user = db.execute(
-            'SELECT * FROM users WHERE login = ? AND password = ?',
-            (login, password)
-        ).fetchone()
-        db.close()
-
+        user = query('SELECT * FROM users WHERE login = ? AND password = ?',
+                     (request.form['login'], request.form['password']), fetchone=True)
         if user:
-            session['user_id'] = user['id']
-            session['login'] = user['login']
-            session['role'] = user['role']
-            if user['role'] == 'admin':
-                return redirect(url_for('admin_panel'))
-            return redirect(url_for('applications'))
-        else:
-            error = 'Неверный логин или пароль'
+            session.update({'user_id': user['id'], 'login': user['login'], 'role': user['role']})
+            return redirect(url_for('admin_panel' if user['role'] == 'admin' else 'applications'))
+        error = 'Неверный логин или пароль'
     return render_template('login.html', error=error)
 
 @app.route('/logout')
@@ -102,63 +76,34 @@ def applications():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    db = get_db()
-
     if request.method == 'POST' and 'feedback' in request.form:
-        app_id = request.form['app_id']
-        feedback = request.form['feedback']
-        db.execute('UPDATE applications SET feedback = ? WHERE id = ? AND user_id = ?',
-                   (feedback, app_id, session['user_id']))
-        db.commit()
+        query('UPDATE applications SET feedback = ? WHERE id = ? AND user_id = ?',
+              (request.form['feedback'], request.form['app_id'], session['user_id']), commit=True)
 
-    apps = db.execute(
-        'SELECT * FROM applications WHERE user_id = ? ORDER BY id DESC',
-        (session['user_id'],)
-    ).fetchall()
-    db.close()
+    apps = query('SELECT * FROM applications WHERE user_id = ? ORDER BY id DESC',
+                 (session['user_id'],), fetchall=True)
     return render_template('applications.html', apps=apps)
 
 @app.route('/create_application', methods=['GET', 'POST'])
 def create_application():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-
     if request.method == 'POST':
-        course_name = request.form['course_name']
-        start_date = request.form['start_date']
-        payment_method = request.form['payment_method']
-
-        db = get_db()
-        db.execute(
-            'INSERT INTO applications (user_id, course_name, start_date, payment_method) VALUES (?, ?, ?, ?)',
-            (session['user_id'], course_name, start_date, payment_method)
-        )
-        db.commit()
-        db.close()
+        query('INSERT INTO applications (user_id, course_name, start_date, payment_method) VALUES (?, ?, ?, ?)',
+              (session['user_id'], request.form['course_name'], request.form['start_date'], request.form['payment_method']), commit=True)
         return redirect(url_for('applications'))
-
     return render_template('create_application.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
-    if 'user_id' not in session or session.get('role') != 'admin':
+    if session.get('role') != 'admin':
         return redirect(url_for('login'))
-
-    db = get_db()
-
     if request.method == 'POST':
-        app_id = request.form['app_id']
-        new_status = request.form['status']
-        db.execute('UPDATE applications SET status = ? WHERE id = ?', (new_status, app_id))
-        db.commit()
-
-    apps = db.execute('''
-        SELECT a.*, u.full_name, u.email, u.phone
-        FROM applications a
-        JOIN users u ON a.user_id = u.id
-        ORDER BY a.id DESC
-    ''').fetchall()
-    db.close()
+        query('UPDATE applications SET status = ? WHERE id = ?',
+              (request.form['status'], request.form['app_id']), commit=True)
+    apps = query('''SELECT a.*, u.full_name, u.email, u.phone
+                    FROM applications a JOIN users u ON a.user_id = u.id
+                    ORDER BY a.id DESC''', fetchall=True)
     return render_template('admin.html', apps=apps)
 
 if __name__ == '__main__':
