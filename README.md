@@ -32,7 +32,7 @@ https://github.com/mister-kaka/korochki_est
 
 ### 6. Откройте в браузере
 
-http://127.0.0.1:5000
+http://127.0.0.1:5000/login
 
 ## Тестовые данные
 
