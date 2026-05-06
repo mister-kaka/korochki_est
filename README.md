@@ -11,7 +11,7 @@ https://github.com/mister-kaka/korochki_est
 ### 1. Клонируйте репозиторий
 
 - git clone https://github.com/mister-kaka/korochki_est
-- cd korochki-est
+- cd korochki_est
 
 ### 2. Создайте и активируйте виртуальное окружение
 
